@@ -1,0 +1,4 @@
+#BasedOnStyle: Google
+BasedOnStyle: LLVM
+ColumnLimit: 100
+NamespaceIndentation: All
