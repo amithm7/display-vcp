@@ -14,9 +14,10 @@
 #include <QStyleOption>
 #include <QWidget>
 
+#include "core/constants.h"
+#include "core/ddcutil-wrapper.h"
 #include <KAboutData>
 #include <KStatusNotifierItem>
-#include "core/ddcutil-wrapper.h"
 
 class CustomWidget : public QWidget {
   Q_OBJECT
@@ -66,42 +67,8 @@ protected:
   }
 };
 
-const short CONTINUOUS_FEATURE_MIN = 0;
-const short BRIGHTNESS_MAX = 100;
-const short CONTRAST_MAX = BRIGHTNESS_MAX;
-
-const short BRIGHTNESS_STEP = 10;
-const short CONTRAST_STEP = 5;
-
-const short BRIGHTNESS_DEFAULT = 50;
-const short CONTRAST_DEFAULT = BRIGHTNESS_DEFAULT;
-
-const short REFRESH_INTERVAL = 5000; // 5 seconds
-
 const QString CURRENT_BRIGHTNESS_TEXT = "Brightness: ";
 const QString CURRENT_CONTRAST_TEXT = "Contrast: ";
-
-// MCCS Version 2.2
-enum VCPCode {
-  // Standard VCP codes https://www.ddcutil.com/vcpinfo_output/
-  BRIGHTNESS = 0x10,
-  CONTRAST = 0x12,
-
-  // Manufacturer-specific VCP codes
-  MODE = 0xE2,
-};
-
-// Mode (VCP = 0xE2) values
-enum PresetModes {
-  USER = 0x00,
-  STANDARD = 0x01,
-  ECO = 0x02,
-  GRAPHICS = 0x03,
-  GAME_ACTION = 0x05,
-  GAME_RACING = 0x06,
-  GAME_SPORTS = 0x07,
-  HDR = 0x0b,
-};
 
 short adjustProperty(QString vcpCode, short delta, short &currentValue,
                      std::pair<short, short> range, auto *increaseBtn, auto *decreaseBtn,
@@ -147,26 +114,32 @@ QMenu *createContextMenu(const short &currentBrightness, const short &currentCon
   brightnessAction->setEnabled(false);
 
   // QAction *increaseBrightnessAction =
-  //     contextMenu->addAction("+" + QString::number(BRIGHTNESS_STEP));
+  //     contextMenu->addAction("+" + QString::number(Constants::Display::Brightness::STEP));
   // QAction *decreaseBrightnessAction =
-  //     contextMenu->addAction("-" + QString::number(BRIGHTNESS_STEP));
+  //     contextMenu->addAction("-" + QString::number(Constants::Display::Brightness::STEP));
 
-  // QObject::connect(increaseBrightnessAction, &QAction::triggered,
-  //                  [increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
-  //                   &currentBrightness]() {
-  //                    adjustProperty(QString::number(VCPCode::BRIGHTNESS, 16), BRIGHTNESS_STEP,
-  //                                   currentBrightness, {CONTINUOUS_FEATURE_MIN, BRIGHTNESS_MAX},
-  //                                   increaseBrightnessAction, decreaseBrightnessAction,
-  //                                   brightnessAction, CURRENT_BRIGHTNESS_TEXT);
-  //                  });
-  // QObject::connect(decreaseBrightnessAction, &QAction::triggered,
-  //                  [increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
-  //                   &currentBrightness]() {
-  //                    adjustProperty(QString::number(VCPCode::BRIGHTNESS, 16), -BRIGHTNESS_STEP,
-  //                                   currentBrightness, {CONTINUOUS_FEATURE_MIN, BRIGHTNESS_MAX},
-  //                                   increaseBrightnessAction, decreaseBrightnessAction,
-  //                                   brightnessAction, CURRENT_BRIGHTNESS_TEXT);
-  //                  });
+  // QObject::connect(
+  //     increaseBrightnessAction, &QAction::triggered,
+  //     [increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
+  //     &currentBrightness]() {
+  //       adjustProperty(
+  //           QString::number(Constants::MCCS::VCPCode::std::BRIGHTNESS, 16),
+  //           Constants::Display::Brightness::STEP, currentBrightness,
+  //           {Constants::Display::CONTINUOUS_FEATURE_MIN, Constants::Display::Brightness::MAX},
+  //           increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
+  //           CURRENT_BRIGHTNESS_TEXT);
+  //     });
+  // QObject::connect(
+  //     decreaseBrightnessAction, &QAction::triggered,
+  //     [increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
+  //     &currentBrightness]() {
+  //       adjustProperty(
+  //           QString::number(Constants::MCCS::VCPCode::std::BRIGHTNESS, 16),
+  //           -Constants::Display::Brightness::STEP, currentBrightness,
+  //           {Constants::Display::CONTINUOUS_FEATURE_MIN, Constants::Display::Brightness::MAX},
+  //           increaseBrightnessAction, decreaseBrightnessAction, brightnessAction,
+  //           CURRENT_BRIGHTNESS_TEXT);
+  //     });
 
   QAction *contrastAction =
       contextMenu->addAction(CURRENT_CONTRAST_TEXT + QString::number(currentContrast));
@@ -244,7 +217,7 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
       propertyLabel->setText(labelText + QString::number(currentValue));
     }
   });
-  timer->start(REFRESH_INTERVAL);
+  timer->start(Constants::Display::REFRESH_INTERVAL);
 
   return propertyWidget;
 };
@@ -255,35 +228,50 @@ auto createModeWidget(short &currentMode, QWidget *brightnessWidget, QWidget *co
   modeWidget->setLayout(modeLayout);
 
   // Using a pointer to persist beyond function scope
-  auto *modeButtons =
-      new std::map<short, QPushButton *>{{PresetModes::USER, new QPushButton("User")},
-                                         {PresetModes::STANDARD, new QPushButton("Standard")},
-                                         {PresetModes::ECO, new QPushButton("Eco")},
-                                         {PresetModes::GRAPHICS, new QPushButton("Graphics")},
-                                         {PresetModes::GAME_ACTION, new QPushButton("G-Action")},
-                                         {PresetModes::GAME_RACING, new QPushButton("G-Racing")},
-                                         {PresetModes::GAME_SPORTS, new QPushButton("G-Sports")},
-                                         {PresetModes::HDR, new QPushButton("HDR")}};
+  auto *modeButtons = new std::map<short, QPushButton *>{
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER,
+       new QPushButton("User")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::STANDARD,
+       new QPushButton("Standard")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::ECO,
+       new QPushButton("Eco")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GRAPHICS,
+       new QPushButton("Graphics")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION,
+       new QPushButton("G-Action")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_RACING,
+       new QPushButton("G-Racing")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_SPORTS,
+       new QPushButton("G-Sports")},
+      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::HDR,
+       new QPushButton("HDR")}};
 
   // Disable current mode button
   (*modeButtons)[currentMode]->setEnabled(false);
 
   // Changing values in ECO / STD / Graphics will switch to the USER mode
-  brightnessWidget->setEnabled(currentMode == PresetModes::USER ||
-                               currentMode >= PresetModes::GAME_ACTION);
-  contrastWidget->setEnabled(currentMode == PresetModes::USER ||
-                             currentMode >= PresetModes::GAME_ACTION);
+  brightnessWidget->setEnabled(
+      currentMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+      currentMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
+  contrastWidget->setEnabled(
+      currentMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+      currentMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
 
   auto changeMode = [brightnessWidget, contrastWidget, modeButtons, &currentMode](short newMode) {
-    int exitCode = setVCPValue(QString::number(VCPCode::MODE, 16), newMode);
+    int exitCode = setVCPValue(
+        QString::number(Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::Code::MODE, 16),
+        newMode);
     if (exitCode != 0) {
       qDebug() << "Failed to change the mode!";
       return;
     }
 
-    brightnessWidget->setEnabled(newMode == PresetModes::USER ||
-                                 newMode >= PresetModes::GAME_ACTION);
-    contrastWidget->setEnabled(newMode == PresetModes::USER || newMode >= PresetModes::GAME_ACTION);
+    brightnessWidget->setEnabled(
+        newMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+        newMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
+    contrastWidget->setEnabled(
+        newMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+        newMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
 
     (*modeButtons)[currentMode]->setEnabled(true);
     currentMode = newMode;
@@ -329,23 +317,25 @@ int main(int argc, char *argv[]) {
   // Disable the default actions (including the default Quit action)
   trayIcon->setStandardActionsEnabled(false);
 
-  short currentBrightness = getVCPValue(QString::number(VCPCode::BRIGHTNESS, 16));
+  short currentBrightness =
+      getVCPValue(QString::number(Constants::MCCS::VCPCode::std::BRIGHTNESS, 16));
   if (currentBrightness == -1) {
     qDebug() << "Failed to get the current brightness!";
-    currentBrightness = BRIGHTNESS_DEFAULT;
+    currentBrightness = Constants::Display::Brightness::DEFAULT;
   }
 
-  short currentContrast = getVCPValue(QString::number(VCPCode::CONTRAST, 16));
+  short currentContrast = getVCPValue(QString::number(Constants::MCCS::VCPCode::std::CONTRAST, 16));
   if (currentContrast == -1) {
     qDebug() << "Failed to get the current contrast!";
-    currentContrast = CONTRAST_DEFAULT;
+    currentContrast = Constants::Display::Contrast::DEFAULT;
   }
 
-  short currentMode = getVCPValue(QString::number(VCPCode::MODE, 16));
+  short currentMode = getVCPValue(
+      QString::number(Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::Code::MODE, 16));
 
   if (currentMode == -1) {
     qDebug() << "Failed to get the current mode!";
-    currentMode = PresetModes::USER;
+    currentMode = Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER;
   }
 
   trayIcon->setContextMenu(createContextMenu(currentBrightness, currentContrast, app));
@@ -382,11 +372,13 @@ int main(int argc, char *argv[]) {
   mainLayout->addWidget(titleLabel);
 
   QWidget *brightnessWidget = createContinuousPropertyWidget(
-      CURRENT_BRIGHTNESS_TEXT, currentBrightness, BRIGHTNESS_STEP,
-      {CONTINUOUS_FEATURE_MIN, BRIGHTNESS_MAX}, QString::number(VCPCode::BRIGHTNESS, 16));
+      CURRENT_BRIGHTNESS_TEXT, currentBrightness, Constants::Display::Brightness::STEP,
+      {Constants::Display::CONTINUOUS_FEATURE_MIN, Constants::Display::Brightness::MAX},
+      QString::number(Constants::MCCS::VCPCode::std::BRIGHTNESS, 16));
   QWidget *contrastWidget = createContinuousPropertyWidget(
-      CURRENT_CONTRAST_TEXT, currentContrast, CONTRAST_STEP, {CONTINUOUS_FEATURE_MIN, CONTRAST_MAX},
-      QString::number(VCPCode::CONTRAST, 16));
+      CURRENT_CONTRAST_TEXT, currentContrast, Constants::Display::Contrast::STEP,
+      {Constants::Display::CONTINUOUS_FEATURE_MIN, Constants::Display::Contrast::MAX},
+      QString::number(Constants::MCCS::VCPCode::std::CONTRAST, 16));
   mainLayout->addWidget(brightnessWidget);
   mainLayout->addWidget(contrastWidget);
 
