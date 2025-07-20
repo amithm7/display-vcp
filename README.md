@@ -50,6 +50,7 @@ sudo zypper install ddcutil
 
 - MacOS
   - https://github.com/alin23/Lunar
+  - https://github.com/MonitorControl/MonitorControl
 - Windows
   - https://github.com/emoacht/Monitorian
 - [bebump/broitness](https://github.com/bebump/broitness)
