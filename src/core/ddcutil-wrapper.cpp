@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QProcess>
+#include <QtConcurrent/QtConcurrent>
 
 short getVCPValue(QString vcpCode) {
   vcpCode = vcpCode.toUpper();
@@ -79,4 +80,29 @@ int setVCPValue(QString vcpCode, short value) {
     qDebug() << "Failed to start the process:" << process.errorString();
 
   return process.exitCode();
+}
+
+void getVCPValueAsync(QString vcpCode, std::function<void(short)> callback) {
+  auto *watcher = new QFutureWatcher<short>();
+  QObject::connect(watcher, &QFutureWatcher<short>::finished, watcher, [watcher, callback]() {
+    short result = watcher->result();
+    callback(result);
+    watcher->deleteLater();
+  });
+
+  // Watcher is on the main/UI thread
+  watcher->setFuture(
+      // Execute getVCPValue in a worker thread
+      QtConcurrent::run(getVCPValue, vcpCode));
+}
+
+void setVCPValueAsync(QString vcpCode, short value, std::function<void(int)> callback) {
+  auto *watcher = new QFutureWatcher<int>();
+  QObject::connect(watcher, &QFutureWatcher<int>::finished, watcher, [watcher, callback]() {
+    int result = watcher->result();
+    callback(result);
+    watcher->deleteLater();
+  });
+
+  watcher->setFuture(QtConcurrent::run(setVCPValue, vcpCode, value));
 }
