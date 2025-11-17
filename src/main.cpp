@@ -70,9 +70,13 @@ protected:
 const QString CURRENT_BRIGHTNESS_TEXT = "Brightness: ";
 const QString CURRENT_CONTRAST_TEXT = "Contrast: ";
 
-short adjustProperty(QString vcpCode, short delta, short &currentValue,
-                     std::pair<short, short> range, auto *increaseBtn, auto *decreaseBtn,
-                     auto *currentValueLabel, QString PROPERTY_LABEL) {
+void adjustProperty(QString vcpCode, short delta, short &currentValue,
+                    std::pair<short, short> range, auto *increaseBtn, auto *decreaseBtn,
+                    auto *currentValueLabel, QString PROPERTY_LABEL) {
+
+  increaseBtn->setEnabled(false);
+  decreaseBtn->setEnabled(false);
+
   short newValue = currentValue + delta;
 
   auto [minValue, maxValue] = range;
@@ -81,28 +85,30 @@ short adjustProperty(QString vcpCode, short delta, short &currentValue,
   else if (newValue < minValue)
     newValue = minValue;
 
-  int exitCode = setVCPValue(vcpCode, newValue);
+  setVCPValueAsync(vcpCode, newValue,
+                   [increaseBtn, decreaseBtn, currentValueLabel, PROPERTY_LABEL, minValue, maxValue,
+                    &currentValue, newValue](int exitCode) mutable {
+                     if (exitCode != 0) {
+                       qDebug() << "Failed to change property:" << exitCode;
+                     } else {
+                       qDebug() << "Property changed successfully!";
+                       currentValue = newValue;
+                     }
 
-  if (exitCode != 0) {
-    qDebug() << "Failed to change property:" << exitCode;
-    return -1;
-  }
+                     QTimer::singleShot(0, [increaseBtn, decreaseBtn, currentValueLabel,
+                                            PROPERTY_LABEL, minValue, maxValue, &currentValue]() {
+                       if (currentValue == minValue)
+                         decreaseBtn->setEnabled(false);
+                       else if (currentValue == maxValue)
+                         increaseBtn->setEnabled(false);
+                       else {
+                         increaseBtn->setEnabled(true);
+                         decreaseBtn->setEnabled(true);
+                       }
 
-  qDebug() << "Property changed successfully!";
-  currentValue = newValue;
-
-  if (currentValue == minValue)
-    decreaseBtn->setEnabled(false);
-  else if (currentValue == maxValue)
-    increaseBtn->setEnabled(false);
-  else {
-    increaseBtn->setEnabled(true);
-    decreaseBtn->setEnabled(true);
-  }
-
-  currentValueLabel->setText(PROPERTY_LABEL + QString::number(currentValue));
-
-  return newValue;
+                       currentValueLabel->setText(PROPERTY_LABEL + QString::number(currentValue));
+                     });
+                   });
 }
 
 QMenu *createContextMenu(const short &currentBrightness, const short &currentContrast,
