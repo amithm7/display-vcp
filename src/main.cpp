@@ -211,11 +211,12 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
       return;
     }
 
-    short newValue = getVCPValue(vcpCode);
-    if (newValue != -1) {
-      currentValue = newValue;
-      propertyLabel->setText(labelText + QString::number(currentValue));
-    }
+    getVCPValueAsync(vcpCode, [propertyLabel, labelText, &currentValue](short newValue) {
+      if (newValue != -1) {
+        currentValue = newValue;
+        propertyLabel->setText(labelText + QString::number(currentValue));
+      }
+    });
   });
   timer->start(Constants::Display::REFRESH_INTERVAL);
 
