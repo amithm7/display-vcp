@@ -205,25 +205,33 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
 
   // Refresh the current value periodically
   QTimer *timer = new QTimer();
-  QObject::connect(timer, &QTimer::timeout, [propertyLabel, labelText, &currentValue, vcpCode]() {
-    // Prevent waking up the monitor if it's off
-    QProcess process;
-    process.start("xset", {"q"});
-    process.waitForFinished();
+  QObject::connect(
+      timer, &QTimer::timeout,
+      [propertyLabel, labelText, &currentValue, vcpCode, increaseButton, decreaseButton]() {
+        // Skip the refresh to avoid races/overwrites.
+        if (!increaseButton->isEnabled() && !decreaseButton->isEnabled()) {
+          qDebug() << "Property change in progress. Skipping refresh.";
+          return;
+        }
 
-    QString output = process.readAllStandardOutput();
-    if (output.contains("Monitor is Off")) {
-      qDebug() << "Monitor is off. Skipping refresh.";
-      return;
-    }
+        // Prevent waking up the monitor if it's off
+        QProcess process;
+        process.start("xset", {"q"});
+        process.waitForFinished();
 
-    getVCPValueAsync(vcpCode, [propertyLabel, labelText, &currentValue](short newValue) {
-      if (newValue != -1) {
-        currentValue = newValue;
-        propertyLabel->setText(labelText + QString::number(currentValue));
-      }
-    });
-  });
+        QString output = process.readAllStandardOutput();
+        if (output.contains("Monitor is Off")) {
+          qDebug() << "Monitor is off. Skipping refresh.";
+          return;
+        }
+
+        getVCPValueAsync(vcpCode, [propertyLabel, labelText, &currentValue](short newValue) {
+          if (newValue != -1) {
+            currentValue = newValue;
+            propertyLabel->setText(labelText + QString::number(currentValue));
+          }
+        });
+      });
   timer->start(Constants::Display::REFRESH_INTERVAL);
 
   return propertyWidget;
