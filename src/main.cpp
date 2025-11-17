@@ -235,23 +235,24 @@ auto createModeWidget(short &currentMode, QWidget *brightnessWidget, QWidget *co
   modeWidget->setLayout(modeLayout);
 
   // Using a pointer to persist beyond function scope
-  auto *modeButtons = new std::map<short, QPushButton *>{
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER,
-       new QPushButton("User")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::STANDARD,
-       new QPushButton("Standard")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::ECO,
-       new QPushButton("Eco")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GRAPHICS,
-       new QPushButton("Graphics")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION,
-       new QPushButton("G-Action")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_RACING,
-       new QPushButton("G-Racing")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_SPORTS,
-       new QPushButton("G-Sports")},
-      {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::HDR,
-       new QPushButton("HDR")}};
+  auto modeButtons =
+      std::make_shared<std::map<short, QPushButton *>>(std::map<short, QPushButton *>{
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER,
+           new QPushButton("User")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::STANDARD,
+           new QPushButton("Standard")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::ECO,
+           new QPushButton("Eco")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GRAPHICS,
+           new QPushButton("Graphics")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION,
+           new QPushButton("G-Action")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_RACING,
+           new QPushButton("G-Racing")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_SPORTS,
+           new QPushButton("G-Sports")},
+          {Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::HDR,
+           new QPushButton("HDR")}});
 
   // Disable current mode button
   (*modeButtons)[currentMode]->setEnabled(false);
@@ -265,24 +266,40 @@ auto createModeWidget(short &currentMode, QWidget *brightnessWidget, QWidget *co
       currentMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
 
   auto changeMode = [brightnessWidget, contrastWidget, modeButtons, &currentMode](short newMode) {
-    int exitCode = setVCPValue(
+    for (auto &kv : *modeButtons)
+      kv.second->setEnabled(false);
+
+    setVCPValueAsync(
         QString::number(Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::Code::MODE, 16),
-        newMode);
-    if (exitCode != 0) {
-      qDebug() << "Failed to change the mode!";
-      return;
-    }
+        newMode,
+        [modeButtons, brightnessWidget, contrastWidget, &currentMode,
+         newMode](int exitCode) mutable {
+          QTimer::singleShot(0, [modeButtons, brightnessWidget, contrastWidget, &currentMode,
+                                 newMode, exitCode]() {
+            if (exitCode != 0) {
+              qDebug() << "Failed to change the mode:" << exitCode;
+            } else {
+              qDebug() << "Mode changed successfully!";
 
-    brightnessWidget->setEnabled(
-        newMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
-        newMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
-    contrastWidget->setEnabled(
-        newMode == Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
-        newMode >= Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
+              brightnessWidget->setEnabled(
+                  newMode ==
+                      Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+                  newMode >=
+                      Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
+              contrastWidget->setEnabled(
+                  newMode ==
+                      Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::USER ||
+                  newMode >=
+                      Constants::MCCS::VCPCode::Manufacturer::AcerXV272UV3::ModeValue::GAME_ACTION);
 
-    (*modeButtons)[currentMode]->setEnabled(true);
-    currentMode = newMode;
-    (*modeButtons)[currentMode]->setEnabled(false);
+              currentMode = newMode;
+            }
+
+            for (auto &kv : *modeButtons) {
+              kv.second->setEnabled(kv.first != currentMode);
+            }
+          });
+        });
   };
 
   short i = 0, cols = 4;
