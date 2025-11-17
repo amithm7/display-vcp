@@ -46,6 +46,6 @@ namespace Constants {
       const short STEP = 5;
     } // namespace Contrast
 
-    const short REFRESH_INTERVAL = 30000; // 30 seconds, for performance
+    const short REFRESH_INTERVAL = 10000; // 10 seconds, for performance
   }                                      // namespace Display
 } // namespace Constants
