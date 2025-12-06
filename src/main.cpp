@@ -6,6 +6,7 @@
 // Qt Widgets https://doc.qt.io/qt-6/qtwidgets-index.html
 #include <QApplication>
 // ---
+#include <QDir>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenu>
@@ -215,12 +216,20 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
         }
 
         // Prevent waking up the monitor if it's off
-        QProcess process;
-        process.start("xset", {"q"});
-        process.waitForFinished();
-
-        QString output = process.readAllStandardOutput();
-        if (output.contains("Monitor is Off")) {
+        const QString path = "/sys/class/drm/card1-HDMI-A-1/enabled";
+        QFile f(path);
+        if (!f.exists()) {
+          qDebug() << "Monitor is Off";
+          return;
+        }
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+          qDebug() << "Failed to open" << path;
+          return;
+        }
+        QByteArray st = f.readAll().trimmed();
+        QString dir = QFileInfo(path).dir().dirName();
+        QString output = QString("%1:%2\n").arg(dir, QString::fromUtf8(st));
+        if (st != "enabled") {
           qDebug() << "Monitor is off. Skipping refresh.";
           return;
         }
