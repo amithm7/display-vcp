@@ -10,7 +10,7 @@
         },
         "ghcr.io/devcontainers/features/git:1": {}
     },
-    "postCreateCommand": "echo \"export GIT_EDITOR=\\\"vi\\\"\" >> ~/.bashrc; sudo apt-get update && sudo apt-get install -y vim build-essential cmake libkf6statusnotifieritem-dev libkf6coreaddons-dev && sudo apt-get clean",
+    "postCreateCommand": "echo \"export GIT_EDITOR=\\\"vi\\\"\" >> ~/.bashrc; sudo apt-get update && sudo apt-get install -y clang-format vim build-essential cmake libkf6statusnotifieritem-dev libkf6coreaddons-dev && sudo apt-get clean",
     "customizations": {
         "vscode": {
             "extensions": [
