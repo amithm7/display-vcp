@@ -216,20 +216,34 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
         }
 
         // Prevent waking up the monitor if it's off
-        const QString path = "/sys/class/drm/card1-HDMI-A-1/enabled";
-        QFile f(path);
-        if (!f.exists()) {
-          qDebug() << "Monitor is Off";
+        const QString path_base = "/sys/class/drm/card1-HDMI-A-1";
+        const QString path_status = path_base + "/status";
+        const QString path_enabled = path_base + "/enabled";
+
+        QFile f_status(path_status);
+        QFile f_enabled(path_enabled);
+        if (!f_enabled.exists() || !f_status.exists()) {
+          qDebug() << "Monitor connector not present:" << path_base;
           return;
         }
-        if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-          qDebug() << "Failed to open" << path;
+        if (!f_enabled.open(QIODevice::ReadOnly | QIODevice::Text)) {
+          qDebug() << "Failed to open" << path_enabled;
           return;
         }
-        QByteArray st = f.readAll().trimmed();
-        QString dir = QFileInfo(path).dir().dirName();
-        QString output = QString("%1:%2\n").arg(dir, QString::fromUtf8(st));
+        if (!f_status.open(QIODevice::ReadOnly | QIODevice::Text)) {
+          qDebug() << "Failed to open" << path_status;
+          return;
+        }
+        QByteArray st_enabled = f_enabled.readAll().trimmed();
+        QByteArray st_status = f_status.readAll().trimmed();
+        if (st_status != "connected" || st_enabled != "enabled") {
+          qDebug() << "Monitor not connected/enabled. Skipping refresh." << st_status << st_enabled;
+          return;
+        }
+        // QString dir = QFileInfo(path).dir().dirName();
+        // QString output = QString("%1:%2\n").arg(dir, QString::fromUtf8(st));
         if (st != "enabled") {
+          // qDebug() << output;
           qDebug() << "Monitor is off. Skipping refresh.";
           return;
         }
