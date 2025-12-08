@@ -12,6 +12,7 @@
     },
     "postCreateCommand": "echo \"export GIT_EDITOR=\\\"vi\\\"\" >> ~/.bashrc; sudo apt-get update && sudo apt-get install -y clang-format vim build-essential cmake libkf6statusnotifieritem-dev libkf6coreaddons-dev && sudo apt-get clean",
     "customizations": {
+        // Requires `ms-vscode-remote.remote-containers` installed in vscode (client)
         "vscode": {
             "extensions": [
                 "streetsidesoftware.code-spell-checker",
