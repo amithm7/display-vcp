@@ -71,6 +71,23 @@ protected:
 const QString CURRENT_BRIGHTNESS_TEXT = "Brightness: ";
 const QString CURRENT_CONTRAST_TEXT = "Contrast: ";
 
+/**
+ * Handles enabling/disabling of increase/decrease buttons based on current value and range
+ */
+void handleButtonStates(short currentValue, std::pair<short, short> range, auto *increaseBtn,
+                        auto *decreaseBtn) {
+  if (currentValue == range.first) {
+    increaseBtn->setEnabled(true);
+    decreaseBtn->setEnabled(false);
+  } else if (currentValue == range.second) {
+    increaseBtn->setEnabled(false);
+    decreaseBtn->setEnabled(true);
+  } else {
+    increaseBtn->setEnabled(true);
+    decreaseBtn->setEnabled(true);
+  }
+}
+
 void adjustProperty(QString vcpCode, short delta, short &currentValue,
                     std::pair<short, short> range, auto *increaseBtn, auto *decreaseBtn,
                     auto *currentValueLabel, QString PROPERTY_LABEL) {
@@ -87,7 +104,7 @@ void adjustProperty(QString vcpCode, short delta, short &currentValue,
     newValue = minValue;
 
   setVCPValueAsync(vcpCode, newValue,
-                   [increaseBtn, decreaseBtn, currentValueLabel, PROPERTY_LABEL, minValue, maxValue,
+                   [increaseBtn, decreaseBtn, currentValueLabel, PROPERTY_LABEL, range,
                     &currentValue, newValue](int exitCode) mutable {
                      if (exitCode != 0) {
                        qDebug() << "Failed to change property:" << exitCode;
@@ -97,15 +114,8 @@ void adjustProperty(QString vcpCode, short delta, short &currentValue,
                      }
 
                      QTimer::singleShot(0, [increaseBtn, decreaseBtn, currentValueLabel,
-                                            PROPERTY_LABEL, minValue, maxValue, &currentValue]() {
-                       if (currentValue == minValue)
-                         decreaseBtn->setEnabled(false);
-                       else if (currentValue == maxValue)
-                         increaseBtn->setEnabled(false);
-                       else {
-                         increaseBtn->setEnabled(true);
-                         decreaseBtn->setEnabled(true);
-                       }
+                                            PROPERTY_LABEL, range, &currentValue]() {
+                       handleButtonStates(currentValue, range, increaseBtn, decreaseBtn);
 
                        currentValueLabel->setText(PROPERTY_LABEL + QString::number(currentValue));
                      });
@@ -208,7 +218,7 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
   QTimer *timer = new QTimer();
   QObject::connect(
       timer, &QTimer::timeout,
-      [propertyLabel, labelText, &currentValue, vcpCode, increaseButton, decreaseButton]() {
+      [propertyLabel, labelText, &currentValue, vcpCode, range, increaseButton, decreaseButton]() {
         // Skip the refresh to avoid races/overwrites.
         if (!increaseButton->isEnabled() && !decreaseButton->isEnabled()) {
           qDebug() << "Property change in progress. Skipping refresh.";
@@ -240,17 +250,12 @@ auto createContinuousPropertyWidget(const QString &labelText, short &currentValu
           qDebug() << "Monitor not connected/enabled. Skipping refresh." << st_status << st_enabled;
           return;
         }
-        // QString dir = QFileInfo(path).dir().dirName();
-        // QString output = QString("%1:%2\n").arg(dir, QString::fromUtf8(st));
-        if (st != "enabled") {
-          // qDebug() << output;
-          qDebug() << "Monitor is off. Skipping refresh.";
-          return;
-        }
 
-        getVCPValueAsync(vcpCode, [propertyLabel, labelText, &currentValue](short newValue) {
+        getVCPValueAsync(vcpCode, [propertyLabel, labelText, &currentValue, range, increaseButton,
+                                   decreaseButton](short newValue) {
           if (newValue != -1) {
             currentValue = newValue;
+            handleButtonStates(currentValue, range, increaseButton, decreaseButton);
             propertyLabel->setText(labelText + QString::number(currentValue));
           }
         });
