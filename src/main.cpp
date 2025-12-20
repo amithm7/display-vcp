@@ -68,6 +68,48 @@ protected:
   }
 };
 
+// Click and hold button to drag a window
+class windowDragButton : public QPushButton {
+public:
+  windowDragButton(QWidget *parent, QWidget *targetWindow)
+      : QPushButton(parent), m_targetWindow(targetWindow) {
+    setFixedSize(22, 22);
+    setText("≡");
+    setToolTip("Drag to move");
+    setFlat(true);
+    setCursor(Qt::OpenHandCursor);
+  }
+
+protected:
+  void mousePressEvent(QMouseEvent *event) override {
+    if (event->button() == Qt::LeftButton) {
+      m_lastGlobal = event->globalPosition().toPoint();
+      setCursor(Qt::ClosedHandCursor);
+      event->accept();
+    }
+    QPushButton::mousePressEvent(event);
+  }
+
+  void mouseMoveEvent(QMouseEvent *event) override {
+    if (event->buttons() & Qt::LeftButton) {
+      QPoint delta = event->globalPosition().toPoint() - m_lastGlobal;
+      if (m_targetWindow)
+        m_targetWindow->move(m_targetWindow->pos() + delta);
+      m_lastGlobal = event->globalPosition().toPoint();
+    }
+    QPushButton::mouseMoveEvent(event);
+  }
+
+  void mouseReleaseEvent(QMouseEvent *event) override {
+    setCursor(Qt::OpenHandCursor);
+    QPushButton::mouseReleaseEvent(event);
+  }
+
+private:
+  QWidget *m_targetWindow{nullptr};
+  QPoint m_lastGlobal;
+};
+
 const QString CURRENT_BRIGHTNESS_TEXT = "Brightness: ";
 const QString CURRENT_CONTRAST_TEXT = "Contrast: ";
 
@@ -353,7 +395,7 @@ int main(int argc, char *argv[]) {
 
   QString programName = "display-vcp";
   QString displayName = "Display VCP";
-  QString programVersion = "0.1";
+  QString programVersion = "0.2";
   QString programDescription = "Virtual Control Panel app to control display features "
                                "like brightness, contrast, etc. available on KDE system tray";
 
@@ -413,6 +455,8 @@ int main(int argc, char *argv[]) {
 
   // Create a frame to contain the main layout
   QFrame *mainFrame = new QFrame(mainWidget);
+  mainFrame->setObjectName("mainFrame");
+  mainFrame->setStyleSheet("#mainFrame { border: 2px solid #FFD700; }");
   mainFrame->setFrameStyle(QFrame::Box | QFrame::Raised);
   mainFrame->setLineWidth(2);
   frameLayout->addWidget(mainFrame);
@@ -422,6 +466,23 @@ int main(int argc, char *argv[]) {
   mainLayout->setContentsMargins(20, 20, 20, 20);
   mainFrame->setLayout(mainLayout);
 
+  auto *headerWidget = new QWidget();
+  QHBoxLayout *headerLayout = new QHBoxLayout(headerWidget);
+  headerLayout->setContentsMargins(0, 0, 0, 0);
+  headerWidget->setLayout(headerLayout);
+
+  auto *dragButton1 = new windowDragButton(headerWidget, mainWidget);
+  auto *dragButton2 = new windowDragButton(headerWidget, mainWidget);
+  headerLayout->addWidget(dragButton1);
+  headerLayout->addStretch();
+
+  mainLayout->insertWidget(0, headerWidget);
+
+  QTimer::singleShot(0, [dragButton1, dragButton2]() {
+    dragButton1->raise();
+    dragButton2->raise();
+  });
+
   QLabel *titleLabel = new QLabel(displayName + " v" + programVersion);
 
   QFont titleFont = titleLabel->font();
@@ -429,7 +490,9 @@ int main(int argc, char *argv[]) {
   titleFont.setBold(true);
   titleLabel->setFont(titleFont);
 
-  mainLayout->addWidget(titleLabel);
+  headerLayout->addWidget(titleLabel);
+  headerLayout->addStretch();
+  headerLayout->addWidget(dragButton2);
 
   QWidget *brightnessWidget = createContinuousPropertyWidget(
       CURRENT_BRIGHTNESS_TEXT, currentBrightness, Constants::Display::Brightness::STEP,
