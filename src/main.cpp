@@ -455,8 +455,9 @@ int main(int argc, char *argv[]) {
 
   // Create a frame to contain the main layout
   QFrame *mainFrame = new QFrame(mainWidget);
-  mainFrame->setObjectName("mainFrame");
-  mainFrame->setStyleSheet("#mainFrame { border: 2px solid #FFD700; }");
+  // FIXME: Using stylesheet causes rendering issues, when light / dark mode switches
+  // mainFrame->setObjectName("mainFrame");
+  // mainFrame->setStyleSheet("#mainFrame { border: 2px solid #FFD700; }");
   mainFrame->setFrameStyle(QFrame::Box | QFrame::Raised);
   mainFrame->setLineWidth(2);
   frameLayout->addWidget(mainFrame);
