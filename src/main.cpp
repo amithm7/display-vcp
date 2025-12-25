@@ -9,7 +9,9 @@
 #include <QDir>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLockFile>
 #include <QMenu>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
 #include <QStyleOption>
@@ -398,6 +400,14 @@ int main(int argc, char *argv[]) {
   QString programVersion = "0.2";
   QString programDescription = "Virtual Control Panel app to control display features "
                                "like brightness, contrast, etc. available on KDE system tray";
+
+  QString lockFilePath = QDir::temp().filePath("display-vcp.lock");
+  QLockFile lockFile(lockFilePath);
+  if (!lockFile.tryLock(100)) {
+    qDebug() << "Another instance is already running. Exiting.";
+    QMessageBox::warning(nullptr, displayName, displayName + " is already running.");
+    return 0;
+  }
 
   // Application metadata
   KAboutData aboutData(programName, displayName, programVersion, programDescription,
